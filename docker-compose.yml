@@ -1,0 +1,83 @@
+version: '3.3'
+
+networks:
+  game:
+    driver: bridge
+    
+volumes:
+  prometheus_data: {}
+
+services:
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - 9100:9100
+    network_mode: host
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - 9090:9090
+    network_mode: host
+  
+  loki:
+    image: grafana/loki:1.4.1
+    container_name: loki
+    ports:
+      - 3100:3100
+    command: -config.file=/etc/loki/local-config.yaml
+    network_mode: host
+
+  promtail:
+    image: grafana/promtail:1.4.1
+    container_name: promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers
+      - ./promtail:/etc/promtail/
+    command: -config.file=/etc/promtail/docker-config.yml
+    network_mode: host
+
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    ports:
+      - 3000:3000
+    network_mode: host
+        
+  mc:
+    image: itzg/minecraft-server
+    container_name: mc
+    environment:
+      EULA: "TRUE"
+      VERSION: 1.19.3
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    volumes:
+      - ./minecraft-data:/data
+    ports:
+      - 25565:25565
+    networks:
+      - game

@@ -6,6 +6,7 @@ networks:
     
 volumes:
   prometheus_data: {}
+  grafana_data:
 
 services:
   node-exporter:
@@ -56,12 +57,15 @@ services:
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers
       - ./promtail:/etc/promtail/
+      - ./minecraft-data/logs:/minecraft-data/logs
     command: -config.file=/etc/promtail/docker-config.yml
     network_mode: host
 
   grafana:
     image: grafana/grafana-oss
     container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
     ports:
       - 3000:3000
     network_mode: host
